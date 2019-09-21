@@ -1,0 +1,45 @@
+.RiceMap {
+    /*display:block;*/
+    /*justify-content: space-around;*/
+    display: flex;
+}
+
+.RiceMap-controls {
+    /*margin-top:30px;*/
+    /*margin-right:20px;*/
+    /*max-height: 1%;*/
+    /*float: right;*/
+    max-width: 30%;
+    min-height: 500px;
+    flex:30%
+    /*border: 5px solid #1C6EA4;*/
+}
+
+.RiceMap-map {
+    /*max-height: 70%;*/
+    max-width: 70%;
+    /*margin-top: 30px;*/
+    margin-left: 30%;
+    /*float: right;*/
+    flex:70%;
+    /*border: 5px solid #1C6EA4;*/
+}
+
+.RiceMap-colorbox {
+    width: 10px;
+    height: 10px;
+    /*display: inline-block;*/
+    background-color: #CCC;
+    /*position: absolute;*/
+    /*left: 5px;*/
+    /*top: 5px;*/
+}
+
+.row {
+    display: flex;
+    margin-left: 50%;
+}
+
+.column {
+    flex: 50%;
+}
