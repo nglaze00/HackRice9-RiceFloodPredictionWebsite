@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ButtonGroup, Button, Card } from 'react-bootstrap'
-import {Map, Marker, InfoWindow, Polygon, GoogleApiWrapper} from 'google-maps-react';
+import {Map, Marker, InfoWindow, Polygon, Polyline, GoogleApiWrapper} from 'google-maps-react';
 import './RiceMap.css';
 
 import icon from '../resources/icon.png';
@@ -18,7 +18,11 @@ class RiceMap extends React.Component {
             <InfoWindow
                 visible={false}
             />,
-        selected: undefined
+        polypath: undefined,
+        selected: undefined,
+        pathMode: false,
+        firstNode: undefined,
+        secondNode: undefined
     };
 
     /**
@@ -46,7 +50,7 @@ class RiceMap extends React.Component {
                 body: JSON.stringify(body)}
         );
 
-        console.log("Flood report submitted with severity " + type)
+        // console.log("Flood report submitted with severity " + type)
 
         alert("You have submitted a flood report with severity " + type + " at location " + this.state.selected + "!")
         //
@@ -61,11 +65,23 @@ class RiceMap extends React.Component {
 
     onNodeClick(props, marker, e) {
 
-        console.log(marker.name);
+        // console.log(marker.label);
 
         this.setState({
             selected: marker.name
         })
+
+        if (this.state.pathMode) {
+            if (this.state.firstNode == undefined) {
+                this.setState({
+                    firstNode: marker.name
+                })
+            } else {
+                this.setState({
+                    secondNode: marker.name
+                })
+            }
+        }
 
 
 
@@ -80,7 +96,10 @@ class RiceMap extends React.Component {
 
         let keys = Object.keys(response);
 
-        for (let key in keys) {
+
+        for (let key1 in keys) {
+
+            let key = response[key1]["id"];
 
             let isFlooded = response[key]['is_flooded'][today];
 
@@ -135,7 +154,7 @@ class RiceMap extends React.Component {
 
         let today = this.makeDate();
 
-        console.log(today);
+        // console.log(today);
 
         let newNodes = [];
 
@@ -144,7 +163,9 @@ class RiceMap extends React.Component {
         for (let key in keys) {
 
             // console.log(key);
-            console.log(response[key]);
+
+            // console.log(key);
+            // console.log(response[key]);
 
             let pos = {
                 lat: response[key]['coords'][0],
@@ -178,6 +199,82 @@ class RiceMap extends React.Component {
         });
 
         this.makeFloodPolygons(response);
+    }
+
+    beginPathGeneration() {
+        this.setState({
+            firstNode: undefined,
+            secondNode: undefined,
+            pathMode: true,
+        });
+
+    }
+
+    finishPathGeneration() {
+
+        console.log("Entered finish path generatioin");
+
+        let body = {
+            "firstNode": this.state.firstNode,
+            "secondNode": this.state.secondNode
+        };
+
+        fetch('http://127.0.0.1:5000/path',
+            {method: 'post',
+                body: JSON.stringify(body)}
+        ).then(data => data.json())
+        .then(data=>this.generatePath(data))
+
+
+
+        this.setState({
+            firstNode: undefined,
+            secondNode: undefined,
+            pathMode: false,
+        })
+
+    }
+
+    generatePath(pathData) {
+
+        // console.log(pathData);
+
+        const pathCoords = [];
+
+        for (let coord in pathData["path_coords"]) {
+
+            let coordData = pathData["path_coords"][coord];
+
+            let newCoord = {
+                lat: coordData[0],
+                lng: coordData[1]
+            };
+
+            // console.log(newCoord);
+
+            pathCoords.push(newCoord);
+
+        }
+
+        // console.log(pathCoords);
+
+        let newline =
+            <Polyline
+                path={pathCoords}
+                strokeColor="#0000FF"
+                strokeOpacity={0.8}
+                strokeWeight={3}
+            />;
+
+        this.setState({
+            polypath: newline
+        });
+
+        if (pathData["path_type"] == "wet") {
+            alert("Warning: No dry path could be found, this path is potentially flooded");
+        }
+
+
     }
 
     mapClick(mapProps, map, clickEvent) {
@@ -240,7 +337,7 @@ class RiceMap extends React.Component {
         map.mapTypeControl = false;
         map.minZoom = 16;
 
-        var sw = new this.props.google.maps.LatLng(29.711348, -95.412796);
+        var sw = new this.props.google.maps.LatLng(29.711348, -95.413796);
         var ne = new this.props.google.maps.LatLng(29.723871, -95.393055);
 
         var bounds = new this.props.google.maps.LatLngBounds(sw, ne);
@@ -250,9 +347,11 @@ class RiceMap extends React.Component {
     }
 
     updateNodesAndPolygons() {
+        console.log("Updating nodes and polygons after report");
         fetch('http://127.0.0.1:5000/nodes')
             .then(data => data.json())
             .then(data=>this.makeNodes(data))
+        console.log("Finished updating nodes and polygons after report");
     }
 
     componentDidMount() {
@@ -275,35 +374,80 @@ class RiceMap extends React.Component {
 
     render() {
 
+        let nodeDate = undefined;
+
         return (
             <div className={"RiceMap"}>
 
                 <div className={"RiceMap-controls"}>
+                    <Card bg="secondary" text="white" style={{ width: 'fill', height: 'fill'}}>
+                        <Card.Header><b>Put It In Rice</b></Card.Header>
+                    </Card>
                     <Card bg="primary" text="white" style={{ width: 'fill', height: 'fill'}}>
                         {/*<Card.Header>Put It In Rice</Card.Header>*/}
                         <Card.Body>
-                            <Card.Title>Put It In Rice</Card.Title>
+                            <Card.Title>Report Flooding</Card.Title>
                             <Card.Text>
-                                Select a location on the left to report flooding!
+                                Select a location on the right to report flooding!
                             </Card.Text>
                             <Card.Text>
-                                Current selected location: {this.state.selected}
+                                <b>Current selected location:</b> {this.state.selected == undefined ? "None" : this.state.selected}
+                            </Card.Text>
+                            <Card.Text>
+                                Once selected, choose the severity below.
                             </Card.Text>
                         </Card.Body>
-                        <ButtonGroup vertical size="sm">
+                        <ButtonGroup vertical size="sm" style={{minWidth: '90%', margin: 'auto'}}>
                             <Button onClick={(e) => {this.onReportSubmit(e, 0)}} variant={"success"} disabled={!this.state.selected} >not flooded (less than 2 inches)</Button>
                             <Button onClick={(e) => {this.onReportSubmit(e, 1)}} variant={"secondary"} disabled={!this.state.selected}>wet but walkable (2 to 4 inches)</Button>
-                            <Button onClick={(e) => {this.onReportSubmit(e, 2)}} variant={"warning"} disabled={!this.state.selected}>wouldn't walk on it (4 to 6 inches)</Button>
+                            <Button onClick={(e) => {this.onReportSubmit(e, 2)}} variant={"warning"} disabled={!this.state.selected}>wouldn't walk it (4 to 6 inches)</Button>
                             <Button onClick={(e) => {this.onReportSubmit(e, 3)}} variant={"danger"} disabled={!this.state.selected}>miss me (more than 6 inches)</Button>
                         </ButtonGroup>
+                        <div><br/></div>
                     </Card>
-                    <Card bg="secondary" text="white" style={{ width: 'fill', height: 'fill'}}>
+                    <Card bg="info" text="white" style={{ width: 'fill', height: 'fill'}}>
+                        <Card.Body>
+                            <Card.Title>Path Generator</Card.Title>
+                            <Card.Text>
+                                Choose two locations and have a dry path between them generated!<br/>
+                                To begin, select 'begin path' below, press two nodes, then click 'generate path'.
+                            </Card.Text>
+                            <Card.Text>
+                                <b>Start location: </b> {this.state.firstNode == undefined ? "unselected" : this.state.firstNode}
+                            </Card.Text>
+                            <Card.Text>
+                                <b>End location: </b> {this.state.secondNode == undefined ? "unselected" : this.state.secondNode}
+                            </Card.Text>
+                            <Card.Text>
+                                (To restart, simply press 'begin path' again!)
+                            </Card.Text>
+                            <Button onClick={this.beginPathGeneration.bind(this)} variant={"primary"} disabled={false} >begin path</Button>
+                            <Button onClick={this.finishPathGeneration.bind(this)} variant={"secondary"} disabled={!this.state.secondNode} >generate path</Button>
+                        </Card.Body>
+                    </Card>
+                    <Card bg="light" text="black" style={{ width: 'fill', height: 'fill'}}>
                         <Card.Body>
                             <Card.Title>Legend</Card.Title>
                             <div className="row">
-                                <div className="column"><div className="RiceMap-colorbox" style={{backgroundColor: '#bfa92a'}}/></div>
-                                <div className="column"> <p>Test color</p></div>
+                                <div className="column"><div className="RiceMap-colorbox" style={{backgroundColor: '#2fa14d', marginLeft: 'auto', marginRight: 'auto', marginTop: '1%'}}/></div>
+                                <div className="column"> <p style={{textAlign: "left", margin: 'auto'}}>not flooded</p></div>
                             </div>
+                            <div className="row">
+                                <div className="column"><div className="RiceMap-colorbox" style={{backgroundColor: '#0000FF', marginLeft: 'auto', marginRight: 'auto', marginTop: '1%'}}/></div>
+                                <div className="column"> <p style={{textAlign: "left", margin: 'auto'}}>reported flooded</p></div>
+                            </div>
+                            <div className="row">
+                                <div className="column"><div className="RiceMap-colorbox" style={{backgroundColor: '#bfa92a', marginLeft: 'auto', marginRight: 'auto', marginTop: '1%'}}/></div>
+                                <div className="column"> <p style={{textAlign: "left", margin: 'auto'}}>predicted flooded</p></div>
+                            </div>
+                        </Card.Body>
+                    </Card>
+                    <Card bg="dark" text="white" style={{ width: 'fill', height: 'fill'}}>
+                        <Card.Body>
+                            <Card.Title>Credits</Card.Title>
+                            <Card.Text>
+                                Created by Nicholas Glaze (Rice '22), Artun Bayer (Rice '22), Eli Smith (Rice '21), Liam Bonnage (Rice '20) as part of HackRice 9
+                            </Card.Text>
                         </Card.Body>
                     </Card>
                 </div>
@@ -319,6 +463,7 @@ class RiceMap extends React.Component {
                     {this.state.nodes}
                     {this.state.info}
                     {this.state.polygons}
+                    {this.state.polypath}
                 </Map>
 
             </div>
