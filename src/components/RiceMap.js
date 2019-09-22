@@ -407,7 +407,7 @@ class RiceMap extends React.Component {
                     </Card>
                     <Card bg="info" text="white" style={{ width: 'fill', height: 'fill'}}>
                         <Card.Body>
-                            <Card.Title>Path Generator</Card.Title>
+                            <Card.Title>Dry Path Generator</Card.Title>
                             <Card.Text>
                                 Choose two locations and have a dry path between them generated!<br/>
                                 To begin, select 'begin path' below, press two nodes, then click 'generate path'.
