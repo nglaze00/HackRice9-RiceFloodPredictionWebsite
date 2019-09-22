@@ -3,8 +3,6 @@ import { ButtonGroup, Button, Card } from 'react-bootstrap'
 import {Map, Marker, InfoWindow, Polygon, Polyline, GoogleApiWrapper} from 'google-maps-react';
 import './RiceMap.css';
 
-import icon from '../resources/icon.png';
-
 class RiceMap extends React.Component {
 
     state = {
@@ -29,16 +27,7 @@ class RiceMap extends React.Component {
      * type is the severity of flooding, 0 is none 3 is worst
      */
     onReportSubmit(event, type) {
-        // alert('Form submitted')
 
-        // let body = {
-        //     "test": "test"
-        // };
-        //
-        // fetch('http://127.0.0.1:5000/floodreport',
-        //     {method: 'post',
-        //         body: JSON.stringify(body)}
-        // );
 
         let body = {
             "node": this.state.selected,
@@ -50,14 +39,9 @@ class RiceMap extends React.Component {
                 body: JSON.stringify(body)}
         );
 
-        // console.log("Flood report submitted with severity " + type)
 
         alert("You have submitted a flood report with severity " + type + " at location " + this.state.selected + "!")
-        //
-        // this.setState({
-        //     // nodes: [],
-        //     // polygons: []
-        // })
+
 
         this.updateNodesAndPolygons();
 
@@ -65,7 +49,6 @@ class RiceMap extends React.Component {
 
     onNodeClick(props, marker, e) {
 
-        // console.log(marker.label);
 
         this.setState({
             selected: marker.name
@@ -154,18 +137,11 @@ class RiceMap extends React.Component {
 
         let today = this.makeDate();
 
-        // console.log(today);
-
         let newNodes = [];
 
         let keys = Object.keys(response);
 
         for (let key in keys) {
-
-            // console.log(key);
-
-            // console.log(key);
-            // console.log(response[key]);
 
             let pos = {
                 lat: response[key]['coords'][0],
@@ -183,11 +159,7 @@ class RiceMap extends React.Component {
                     title={info}
                     name={key}
                     position={pos}
-                    // icon = {{
-                    //     url: '../resources/icon.png',
-                    //     anchor: new this.props.google.maps.Point(32,32),
-                    //     scaledSize: new this.props.google.maps.Size(64,64)
-                    // }}
+
                 />;
 
             newNodes.push(newMarker)
@@ -237,8 +209,6 @@ class RiceMap extends React.Component {
 
     generatePath(pathData) {
 
-        // console.log(pathData);
-
         const pathCoords = [];
 
         for (let coord in pathData["path_coords"]) {
@@ -250,13 +220,11 @@ class RiceMap extends React.Component {
                 lng: coordData[1]
             };
 
-            // console.log(newCoord);
 
             pathCoords.push(newCoord);
 
         }
 
-        // console.log(pathCoords);
 
         let newline =
             <Polyline
